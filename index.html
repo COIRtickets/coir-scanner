@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>COIR Ticket Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --navy: #071d3a;
+      --ice: #eaf6ff;
+      --green: #10894f;
+      --red: #d62828;
+      --amber: #c77700;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(160deg, var(--navy), #0b376d);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 28px 16px;
+      text-align: center;
+    }
+    .card {
+      width: min(720px, 100%);
+      background: rgba(255, 255, 255, 0.11);
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      border-radius: 22px;
+      padding: 24px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+    }
+    h1 { margin: 0 0 8px; font-size: 34px; }
+    .subtitle { margin-bottom: 22px; opacity: 0.9; }
+    .controls, .manual {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 18px 0;
+    }
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 14px 22px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .primary { background: var(--ice); color: var(--navy); }
+    .secondary {
+      background: transparent;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+    }
+    #reader {
+      background: white;
+      color: black;
+      border-radius: 16px;
+      overflow: hidden;
+      width: min(430px, 100%);
+      margin: 18px auto;
+    }
+    input {
+      width: min(430px, 100%);
+      padding: 14px 16px;
+      border: 0;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+    #status {
+      display: none;
+      margin-top: 20px;
+      padding: 22px 18px;
+      border-radius: 18px;
+      font-size: 23px;
+      font-weight: 800;
+    }
+    #details {
+      margin-top: 10px;
+      font-size: 17px;
+      word-break: break-word;
+      font-weight: 600;
+    }
+    .valid { background: var(--green); }
+    .invalid { background: var(--red); }
+    .checking { background: var(--amber); }
+    .small {
+      margin-top: 18px;
+      font-size: 13px;
+      line-height: 1.45;
+      opacity: 0.78;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>COIR Ticket Scanner</h1>
+    <div class="subtitle">Canterbury Olympic Ice Rink check-in</div>
+
+    <div class="controls">
+      <button class="primary" onclick="startScanner()">Start Scanner</button>
+      <button class="secondary" onclick="stopScanner()">Stop</button>
+    </div>
+
+    <div id="reader"></div>
+
+    <div class="manual">
+      <input id="manualTicket" placeholder="Or type Ticket ID manually" />
+      <button class="primary" onclick="manualCheck()">Check Ticket</button>
+    </div>
+
+    <div id="status">
+      <div id="result"></div>
+      <div id="details"></div>
+    </div>
+
+    <div class="small">
+      Scanner connected to Zapier. Scan a customer QR code or manually enter the Ticket ID.
+    </div>
+  </div>
+
+  <script>
+    const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/28099949/42e77ah/";
+
+    let html5QrCode = null;
+    let scanningLocked = false;
+
+    function showStatus(type, title, message = "") {
+      const status = document.getElementById("status");
+      const result = document.getElementById("result");
+      const details = document.getElementById("details");
+
+      status.className = type;
+      status.style.display = "block";
+      result.textContent = title;
+      details.textContent = message;
+    }
+
+    function resetStatus() {
+      document.getElementById("status").style.display = "none";
+      document.getElementById("result").textContent = "";
+      document.getElementById("details").textContent = "";
+    }
+
+    async function sendToZapier(ticketId) {
+      ticketId = String(ticketId || "").trim();
+
+      if (!ticketId) {
+        showStatus("invalid", "No ticket ID found", "");
+        return;
+      }
+
+      if (scanningLocked) return;
+
+      scanningLocked = true;
+      showStatus("checking", "Checking ticket...", ticketId);
+
+      try {
+        const url = ZAPIER_WEBHOOK_URL + "?ticket=" + encodeURIComponent(ticketId);
+
+        await fetch(url, {
+          method: "GET",
+          mode: "no-cors"
+        });
+
+        showStatus("valid", "SCAN SENT ✓", "Ticket ID: " + ticketId);
+
+        setTimeout(() => {
+          scanningLocked = false;
+          resetStatus();
+        }, 2500);
+
+      } catch (err) {
+        showStatus("invalid", "SCAN FAILED", "Please check the internet connection.");
+        scanningLocked = false;
+      }
+    }
+
+    function manualCheck() {
+      const value = document.getElementById("manualTicket").value;
+      sendToZapier(value);
+    }
+
+    async function startScanner() {
+      resetStatus();
+
+      if (html5QrCode) return;
+
+      html5QrCode = new Html5Qrcode("reader");
+
+      try {
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          decodedText => sendToZapier(decodedText),
+          errorMessage => {}
+        );
+      } catch (err) {
+        showStatus("invalid", "Camera could not start", "Check browser camera permissions.");
+        html5QrCode = null;
+      }
+    }
+
+    async function stopScanner() {
+      if (!html5QrCode) return;
+
+      try {
+        await html5QrCode.stop();
+        html5QrCode.clear();
+      } catch (err) {
+        console.log(err);
+      }
+
+      html5QrCode = null;
+      resetStatus();
+    }
+  </script>
+</body>
+</html>
