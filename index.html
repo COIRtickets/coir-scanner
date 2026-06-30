@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>COIR Ticket Scanner Pro Plus</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <style>
+    :root {
+      --navy:#071d3a;
+      --blue:#0d63c7;
+      --ice:#eaf6ff;
+      --gold:#ffd27a;
+      --green:#0f8f52;
+      --red:#d62828;
+      --amber:#c77700;
+      --glass:rgba(255,255,255,.13);
+    }
+
+    * { box-sizing:border-box; }
+
+    body {
+      margin:0;
+      min-height:100vh;
+      font-family:Arial, Helvetica, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(13,99,199,.55), transparent 38%),
+        linear-gradient(160deg, var(--navy), #0b376d);
+      color:white;
+      display:flex;
+      justify-content:center;
+      align-items:flex-start;
+      padding:20px 12px;
+      text-align:center;
+    }
+
+    .app {
+      width:min(860px,100%);
+      background:var(--glass);
+      border:1px solid rgba(255,255,255,.24);
+      border-radius:28px;
+      padding:22px;
+      box-shadow:0 24px 55px rgba(0,0,0,.32);
+      backdrop-filter:blur(8px);
+    }
+
+    .brand {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:12px;
+      margin-bottom:8px;
+    }
+
+    .logo {
+      width:54px;
+      height:54px;
+      border-radius:50%;
+      background:linear-gradient(145deg, var(--ice), var(--gold));
+      color:var(--navy);
+      display:grid;
+      place-items:center;
+      font-weight:900;
+      font-size:18px;
+    }
+
+    h1 { margin:0; font-size:34px; letter-spacing:.2px; }
+    .subtitle { opacity:.9; margin:4px 0 18px; font-size:15px; }
+
+    .topline {
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin:16px 0;
+    }
+
+    .counter {
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.16);
+      border-radius:16px;
+      padding:12px;
+    }
+
+    .counter strong { display:block; font-size:28px; margin-bottom:2px; }
+    .counter span { font-size:12px; opacity:.82; }
+
+    .session-bar {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin:12px 0 16px;
+    }
+
+    .session-bar input {
+      width:100%;
+      background:rgba(255,255,255,.92);
+    }
+
+    .controls, .manual {
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin:18px 0;
+    }
+
+    button {
+      border:0;
+      border-radius:999px;
+      padding:14px 22px;
+      font-size:16px;
+      font-weight:800;
+      cursor:pointer;
+      transition:transform .08s ease, opacity .15s ease;
+    }
+
+    button:active { transform:scale(.97); }
+    button:disabled { opacity:.55; cursor:not-allowed; }
+
+    .primary { background:var(--ice); color:var(--navy); }
+    .secondary {
+      background:transparent;
+      color:white;
+      border:1px solid rgba(255,255,255,.55);
+    }
+
+    input {
+      width:min(430px,100%);
+      padding:15px 16px;
+      border:0;
+      border-radius:14px;
+      font-size:16px;
+      outline:none;
+    }
+
+    #reader {
+      background:white;
+      color:black;
+      border-radius:18px;
+      overflow:hidden;
+      width:min(440px,100%);
+      margin:18px auto;
+      display:none;
+    }
+
+    #resultPanel {
+      display:none;
+      margin-top:18px;
+      border-radius:24px;
+      padding:30px 18px;
+      color:white;
+      animation:pop .18s ease-out;
+    }
+
+    @keyframes pop {
+      from { transform:scale(.96); opacity:.6; }
+      to { transform:scale(1); opacity:1; }
+    }
+
+    #resultTitle {
+      font-size:44px;
+      font-weight:900;
+      margin-bottom:10px;
+      letter-spacing:.5px;
+    }
+
+    #resultDetails {
+      font-size:20px;
+      font-weight:700;
+      word-break:break-word;
+    }
+
+    .valid { background:linear-gradient(135deg,#079449,#11b96a); }
+    .invalid { background:linear-gradient(135deg,#b31414,#ef2f2f); }
+    .already { background:linear-gradient(135deg,#8a4d00,#d68a00); }
+    .checking { background:linear-gradient(135deg,#0d63c7,#0aa4c7); }
+
+    .pill {
+      display:inline-block;
+      margin-top:12px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.16);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .history {
+      margin-top:18px;
+      text-align:left;
+      background:rgba(0,0,0,.16);
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:18px;
+      padding:14px;
+      max-height:180px;
+      overflow:auto;
+    }
+
+    .history h2 {
+      font-size:16px;
+      margin:0 0 10px;
+      text-align:center;
+    }
+
+    .history-item {
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:8px 0;
+      border-bottom:1px solid rgba(255,255,255,.12);
+      font-size:14px;
+    }
+
+    .history-item:last-child { border-bottom:0; }
+
+    .badge {
+      font-weight:900;
+      padding:3px 8px;
+      border-radius:999px;
+      white-space:nowrap;
+    }
+
+    .badge.valid { background:#0f8f52; }
+    .badge.already { background:#c77700; }
+    .badge.invalid { background:#d62828; }
+
+    .small {
+      margin-top:18px;
+      font-size:12px;
+      line-height:1.45;
+      opacity:.78;
+    }
+
+    @media (max-width:640px) {
+      h1 { font-size:25px; }
+      .app { padding:18px 14px; }
+      .topline { grid-template-columns:1fr; }
+      .session-bar { grid-template-columns:1fr; }
+      #resultTitle { font-size:34px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <div class="brand">
+      <div class="logo">COIR</div>
+      <div>
+        <h1>COIR Ticket Scanner</h1>
+        <div class="subtitle">Canterbury Olympic Ice Rink check-in</div>
+      </div>
+    </div>
+
+    <div class="session-bar">
+      <input id="sessionName" placeholder="Session name e.g. Public Skate 10:30am" oninput="saveSessionInfo()" />
+      <input id="staffName" placeholder="Staff name optional" oninput="saveSessionInfo()" />
+    </div>
+
+    <div class="topline">
+      <div class="counter"><strong id="scanCount">0</strong><span>Valid scans this session</span></div>
+      <div class="counter"><strong id="lastTicket">—</strong><span>Last ticket</span></div>
+      <div class="counter"><strong id="sessionLabel">Today</strong><span>Current session</span></div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="primary" onclick="startScanner()">Start Scanner</button>
+      <button class="secondary" onclick="stopScanner()">Stop</button>
+      <button class="secondary" onclick="resetSession()">Reset Counter</button>
+    </div>
+
+    <div id="reader"></div>
+
+    <div class="manual">
+      <input id="manualTicket" placeholder="Or type Ticket ID manually" />
+      <button class="primary" onclick="manualCheck()">Check Ticket</button>
+    </div>
+
+    <section id="resultPanel">
+      <div id="resultTitle"></div>
+      <div id="resultDetails"></div>
+      <div id="resultHint" class="pill"></div>
+    </section>
+
+    <section class="history">
+      <h2>Recent Scans</h2>
+      <div id="historyList"></div>
+    </section>
+
+    <div class="small">
+      Scanner connected to Zapier. This version includes sounds, vibration, duplicate protection, session counter, session label, staff field, and recent scan history.
+    </div>
+  </main>
+
+  <script>
+    const ZAPIER_WEBHOOK_URL = "https://hooks.zapier.com/hooks/catch/28099949/42e77ah/";
+    const DUPLICATE_WINDOW_MS = 15000;
+
+    let html5QrCode = null;
+    let scanningLocked = false;
+
+    let scanCount = Number(localStorage.getItem("coirScanCount") || 0);
+    let recentTickets = JSON.parse(localStorage.getItem("coirRecentTickets") || "{}");
+    let scanHistory = JSON.parse(localStorage.getItem("coirScanHistory") || "[]");
+
+    document.getElementById("scanCount").textContent = scanCount;
+    document.getElementById("sessionName").value = localStorage.getItem("coirSessionName") || "";
+    document.getElementById("staffName").value = localStorage.getItem("coirStaffName") || "";
+    updateSessionLabel();
+    renderHistory();
+
+    function saveSessionInfo() {
+      localStorage.setItem("coirSessionName", document.getElementById("sessionName").value);
+      localStorage.setItem("coirStaffName", document.getElementById("staffName").value);
+      updateSessionLabel();
+    }
+
+    function updateSessionLabel() {
+      const sessionName = document.getElementById("sessionName").value.trim();
+      document.getElementById("sessionLabel").textContent = sessionName ? sessionName.slice(0, 16) : "Today";
+    }
+
+    function beep(type = "success") {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+
+        oscillator.frequency.value = type === "success" ? 880 : type === "already" ? 440 : 220;
+        gain.gain.value = 0.07;
+
+        oscillator.start();
+        setTimeout(() => {
+          oscillator.stop();
+          ctx.close();
+        }, type === "success" ? 130 : 300);
+      } catch (e) {}
+    }
+
+    function vibrate(pattern) {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function showResult(type, title, details = "", hint = "") {
+      const panel = document.getElementById("resultPanel");
+      panel.className = type;
+      panel.style.display = "block";
+      document.getElementById("resultTitle").textContent = title;
+      document.getElementById("resultDetails").textContent = details;
+      document.getElementById("resultHint").textContent = hint;
+    }
+
+    function clearResult() {
+      document.getElementById("resultPanel").style.display = "none";
+      document.getElementById("resultTitle").textContent = "";
+      document.getElementById("resultDetails").textContent = "";
+      document.getElementById("resultHint").textContent = "";
+    }
+
+    function rememberTicket(ticketId) {
+      recentTickets[ticketId] = Date.now();
+      localStorage.setItem("coirRecentTickets", JSON.stringify(recentTickets));
+    }
+
+    function isRecentDuplicate(ticketId) {
+      const lastSeen = recentTickets[ticketId];
+      return lastSeen && Date.now() - lastSeen < DUPLICATE_WINDOW_MS;
+    }
+
+    function addHistory(status, ticketId) {
+      const sessionName = document.getElementById("sessionName").value.trim();
+      const staffName = document.getElementById("staffName").value.trim();
+
+      scanHistory.unshift({
+        status,
+        ticketId,
+        time: new Date().toLocaleTimeString(),
+        session: sessionName || "Session",
+        staff: staffName || ""
+      });
+
+      scanHistory = scanHistory.slice(0, 20);
+      localStorage.setItem("coirScanHistory", JSON.stringify(scanHistory));
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const list = document.getElementById("historyList");
+
+      if (!scanHistory.length) {
+        list.innerHTML = '<div style="text-align:center; opacity:.75;">No scans yet</div>';
+        return;
+      }
+
+      list.innerHTML = scanHistory.map(item => `
+        <div class="history-item">
+          <div>
+            <strong>${escapeHtml(item.ticketId)}</strong><br>
+            <span style="opacity:.75;">${escapeHtml(item.time)} · ${escapeHtml(item.session)}${item.staff ? " · " + escapeHtml(item.staff) : ""}</span>
+          </div>
+          <span class="badge ${item.status}">${item.status.toUpperCase()}</span>
+        </div>
+      `).join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function updateCounter(ticketId) {
+      scanCount += 1;
+      localStorage.setItem("coirScanCount", scanCount);
+      document.getElementById("scanCount").textContent = scanCount;
+      document.getElementById("lastTicket").textContent = ticketId.slice(0, 12);
+    }
+
+    function resetSession() {
+      scanCount = 0;
+      recentTickets = {};
+      scanHistory = [];
+      localStorage.setItem("coirScanCount", "0");
+      localStorage.setItem("coirRecentTickets", "{}");
+      localStorage.setItem("coirScanHistory", "[]");
+      document.getElementById("scanCount").textContent = "0";
+      document.getElementById("lastTicket").textContent = "—";
+      clearResult();
+      renderHistory();
+    }
+
+    async function sendToZapier(ticketId) {
+      ticketId = String(ticketId || "").trim();
+
+      if (!ticketId) {
+        showResult("invalid", "INVALID", "No ticket ID found.", "Try scanning again.");
+        beep("error");
+        vibrate([150, 80, 150]);
+        addHistory("invalid", "No ticket");
+        return;
+      }
+
+      if (scanningLocked) return;
+
+      if (isRecentDuplicate(ticketId)) {
+        showResult("already", "ALREADY SCANNED", "Ticket ID: " + ticketId, "This ticket was scanned in the last 15 seconds.");
+        beep("already");
+        vibrate([120, 70, 120]);
+        addHistory("already", ticketId);
+        return;
+      }
+
+      scanningLocked = true;
+      showResult("checking", "CHECKING...", "Ticket ID: " + ticketId, "Sending to Zapier.");
+
+      try {
+        const sessionName = document.getElementById("sessionName").value.trim();
+        const staffName = document.getElementById("staffName").value.trim();
+
+        const params = new URLSearchParams({
+          ticket: ticketId,
+          session: sessionName,
+          staff: staffName,
+          scannedAt: new Date().toISOString()
+        });
+
+        const url = ZAPIER_WEBHOOK_URL + "?" + params.toString();
+
+        await fetch(url, {
+          method: "GET",
+          mode: "no-cors"
+        });
+
+        rememberTicket(ticketId);
+        updateCounter(ticketId);
+        addHistory("valid", ticketId);
+
+        showResult("valid", "WELCOME ✓", "Ticket ID: " + ticketId, "Scan sent successfully.");
+        beep("success");
+        vibrate([90]);
+
+        setTimeout(() => {
+          scanningLocked = false;
+        }, 1800);
+
+      } catch (err) {
+        showResult("invalid", "SCAN FAILED", "Could not send to Zapier.", "Check internet connection.");
+        beep("error");
+        vibrate([150, 80, 150]);
+        addHistory("invalid", ticketId);
+        scanningLocked = false;
+      }
+    }
+
+    function manualCheck() {
+      const value = document.getElementById("manualTicket").value;
+      sendToZapier(value);
+    }
+
+    async function startScanner() {
+      clearResult();
+      document.getElementById("reader").style.display = "block";
+
+      if (html5QrCode) return;
+
+      try {
+        html5QrCode = new Html5Qrcode("reader");
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          decodedText => sendToZapier(decodedText),
+          errorMessage => {}
+        );
+
+        showResult("checking", "SCANNER READY", "Point the camera at a ticket QR code.", "Camera is active.");
+      } catch (err) {
+        html5QrCode = null;
+        showResult("invalid", "CAMERA ERROR", "Camera could not start.", "Check browser permissions or try on a phone.");
+      }
+    }
+
+    async function stopScanner() {
+      if (!html5QrCode) return;
+
+      try {
+        await html5QrCode.stop();
+        html5QrCode.clear();
+      } catch (err) {
+        console.log(err);
+      }
+
+      html5QrCode = null;
+      document.getElementById("reader").style.display = "none";
+      showResult("checking", "SCANNER STOPPED", "Press Start Scanner when ready.", "");
+    }
+  </script>
+</body>
+</html>
